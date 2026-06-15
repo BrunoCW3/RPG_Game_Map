@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Jogo de Exploração RPG</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --panel-bg: #111118;
+    --panel-border: #2a2a3a;
+    --cell-dark: #1a1a26;
+    --cell-explored: #1e3a1e;
+    --cell-grass: #2d5a2d;
+    --cell-current: #3a7a3a;
+    --cell-fled: #3a1a1a;
+    --accent-gold: #c8a44a;
+    --accent-green: #4aaa4a;
+    --accent-red: #cc3333;
+    --accent-blue: #4a88cc;
+    --text-main: #d0d0c0;
+    --text-dim: #666677;
+    --text-gold: #c8a44a;
+    --text-common: #999988;
+    --text-medium: #6699cc;
+    --text-rare: #9955cc;
+    --hp-bar: #44aa44;
+    --hp-bar-bg: #2a1a1a;
+    --enemy-hp: #aa4444;
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-vt: 'VT323', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-vt);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+  }
+
+  #game-container {
+    width: 850px;
+    height: 850px;
+    display: flex;
+    border: 2px solid var(--panel-border);
+    background: var(--panel-bg);
+    overflow: hidden;
+  }
+
+  /* LEFT SIDEBAR */
+  #sidebar {
+    width: 300px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid var(--panel-border);
+  }
+
+  .panel-title {
+    font-family: var(--font-pixel);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent-gold);
+    text-align: center;
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--panel-border);
+    text-shadow: 0 0 8px rgba(200,164,74,0.5);
+  }
+
+  /* ITEMS PANEL */
+  #items-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 2px solid var(--panel-border);
+    min-height: 0;
+  }
+
+  #items-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px;
+    font-family: var(--font-vt);
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  #items-list::-webkit-scrollbar { width: 4px; }
+  #items-list::-webkit-scrollbar-track { background: var(--panel-bg); }
+  #items-list::-webkit-scrollbar-thumb { background: var(--panel-border); }
+
+  .item-entry {
+    padding: 2px 4px;
+    border-radius: 2px;
+    cursor: default;
+    transition: background 0.1s;
+  }
+  .item-entry.selected {
+    background: rgba(200,164,74,0.2);
+    outline: 1px solid var(--accent-gold);
+  }
+  .item-common { color: var(--text-common); }
+  .item-medium { color: var(--text-medium); }
+  .item-rare { color: var(--text-rare); }
+
+  /* STATUS PANEL */
+  #status-panel {
+    padding: 12px;
+  }
+
+  .stat-row {
+    margin: 8px 0;
+    font-family: var(--font-vt);
+    font-size: 20px;
+  }
+
+  .stat-label {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-family: var(--font-pixel);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+
+  .hp-bar-wrap {
+    background: var(--hp-bar-bg);
+    height: 10px;
+    border: 1px solid #333;
+    border-radius: 1px;
+    margin-top: 3px;
+    margin-bottom: 2px;
+    overflow: hidden;
+  }
+  .hp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #226622, var(--hp-bar));
+    transition: width 0.3s;
+  }
+  .hp-text { color: #88cc88; font-size: 18px; }
+
+  .enemy-hp-bar-fill {
+    background: linear-gradient(90deg, #662222, var(--enemy-hp));
+  }
+
+  .stat-value { color: var(--accent-gold); font-size: 22px; }
+
+  /* RIGHT AREA */
+  #right-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #game-title {
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent-gold);
+    text-align: center;
+    padding: 12px 0 10px;
+    border-bottom: 1px solid var(--panel-border);
+    text-shadow: 0 0 12px rgba(200,164,74,0.6);
+  }
+
+  /* INFO CONSOLE */
+  #info-console {
+    background: #0d0d15;
+    border-bottom: 2px solid var(--panel-border);
+    padding: 10px 16px;
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .console-line {
+    font-family: var(--font-vt);
+    font-size: 22px;
+    line-height: 1.4;
+    color: var(--text-main);
+  }
+  .console-line.warn { color: #ffdd55; }
+  .console-line.danger { color: #ff5555; }
+  .console-line.success { color: var(--accent-green); }
+  .console-line.info { color: #88aacc; }
+  .console-line.dim { color: var(--text-dim); }
+
+  /* BOARD */
+  #board-area {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: 672px;
+    height: 672px;
+    border: 2px solid var(--panel-border);
+    gap: 1px;
+    background: #0a0a12;
+  }
+
+  .cell {
+    position: relative;
+    background: var(--cell-dark);
+    overflow: hidden;
+    cursor: default;
+    transition: background 0.2s;
+  }
+
+  /* Unexplored */
+  .cell.unexplored {
+    background: var(--cell-dark);
+  }
+  .cell.unexplored::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.015) 0px,
+      rgba(255,255,255,0.015) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  }
+
+  /* Explored - grass */
+  .cell.explored {
+    background: var(--cell-grass);
+  }
+  .cell.explored::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 2px 4px at 20% 70%, #3d7a3d 0%, transparent 100%),
+      radial-gradient(ellipse 2px 4px at 50% 80%, #3d7a3d 0%, transparent 100%),
+      radial-gradient(ellipse 2px 4px at 75% 65%, #4a8a4a 0%, transparent 100%),
+      radial-gradient(ellipse 2px 4px at 35% 50%, #367036 0%, transparent 100%);
+    opacity: 0.7;
+  }
+
+  /* Fled - dark red with monster still present */
+  .cell.fled {
+    background: var(--cell-fled);
+    border: 1px solid #662222;
+  }
+  .cell.fled::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(180,30,30,0.15) 0%, transparent 70%);
+  }
+
+  /* Current cell */
+  .cell.current {
+    background: var(--cell-current);
+  }
+
+  /* Coordinate labels */
+  .coord-row {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-family: var(--font-pixel);
+    font-size: 6px;
+    color: rgba(255,255,255,0.25);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .coord-col {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-family: var(--font-pixel);
+    font-size: 6px;
+    color: rgba(255,255,255,0.25);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* Player sprite */
+  .player-sprite {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    font-size: 28px;
+    filter: drop-shadow(0 0 4px #88ff88);
+  }
+
+  /* Entity markers */
+  .entity-marker {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    font-size: 22px;
+  }
+
+  /* Enemy status in combat */
+  #enemy-status {
+    display: none;
+    padding: 8px 12px;
+    background: rgba(80,0,0,0.2);
+    border: 1px solid #441111;
+    border-radius: 2px;
+  }
+
+  .combat-name {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: var(--accent-red);
+    letter-spacing: 1px;
+  }
+
+  /* Controls hint */
+  #controls-hint {
+    text-align: center;
+    font-family: var(--font-pixel);
+    font-size: 6px;
+    color: var(--text-dim);
+    padding: 4px 0 6px;
+    letter-spacing: 1px;
+  }
+
+  /* Scan line overlay */
+  #game-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+
+  <!-- LEFT SIDEBAR -->
+  <div id="sidebar">
+    <div id="items-panel">
+      <div class="panel-title">⚔ ITENS</div>
+      <div id="items-list"></div>
+    </div>
+    <div id="status-panel">
+      <div class="panel-title">◈ STATUS</div>
+
+      <div class="stat-row">
+        <div class="stat-label">HP</div>
+        <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar" style="width:100%"></div></div>
+        <span class="hp-text" id="hp-text">100 / 100</span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-label">ATK</div>
+        <span class="stat-value" id="atk-text">2</span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-label">DEF</div>
+        <span class="stat-value" id="def-text">0</span>
+      </div>
+
+      <div id="enemy-status" style="margin-top:10px">
+        <div class="combat-name" id="enemy-name">GOBLIN</div>
+        <div style="margin-top:6px">
+          <div class="stat-label">HP</div>
+          <div class="hp-bar-wrap"><div class="hp-bar-fill enemy-hp-bar-fill" id="enemy-hp-bar" style="width:100%"></div></div>
+          <span class="hp-text" style="color:#cc8888" id="enemy-hp-text">20 / 20</span>
+        </div>
+        <div style="margin-top:4px;font-size:17px;color:#cc8888">
+          ATK <span id="enemy-atk">5</span> &nbsp; DEF <span id="enemy-def">2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT AREA -->
+  <div id="right-area">
+    <div id="game-title">☩ Jogo de Exploração RPG ☩</div>
+
+    <!-- INFO CONSOLE -->
+    <div id="info-console">
+      <div class="console-line" id="console-line-1"></div>
+      <div class="console-line" id="console-line-2"></div>
+      <div class="console-line" id="console-line-3"></div>
+    </div>
+
+    <!-- BOARD -->
+    <div id="board-area">
+      <div id="board"></div>
+    </div>
+
+    <div id="controls-hint">SETAS: MOVER &nbsp;|&nbsp; Y/N: CONFIRMAR &nbsp;|&nbsp; ESPAÇO: INVENTÁRIO &nbsp;|&nbsp; ↑↓: NAVEGAR &nbsp;|&nbsp; ENTER: USAR ITEM</div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   GAME STATE
+============================================================ */
+const ROWS = 8, COLS = 8;
+// A1 (row7,col0) starts already revealed — player only needs to explore the other 63
+const TOTAL_CELLS = 63;
+
+let logicMatrix = [];    // 0=safe, 1=creature, 2=chest
+let visualMatrix = [];   // 'unexplored','explored','current','fled'
+let entityMatrix = [];   // null, 'goblin', 'chest', 'fled_goblin'
+// Stores paused combat state for fled cells: combatState[r][c] = {combat obj} or null
+let pausedCombat = [];
+
+let playerRow = 7, playerCol = 0;
+
+let player = {
+  hp: 100, maxHp: 100, atk: 2, def: 0,
+  hasAmuleto: false
+};
+
+let inventory = [];
+
+// Count only truly resolved cells (defeated/chest/safe). Fled cells don't count.
+let exploreCount = 0;
+
+let state = 'explore';
+let pendingMoveRow = -1, pendingMoveCol = -1;
+let pendingCellType = -1;
+
+let combat = {};
+
+let itemSelectIndex = 0;
+let itemSelectMode = false;
+
+let generation = 1;
+
+/* ============================================================
+   ITEM TABLES
+============================================================ */
+const ITEMS_COMMON = [
+  {name:'Espada de Madeira', type:'weapon', stat:'atk', val:2},
+  {name:'Armadura Velha', type:'armor', stat:'def', val:5},
+  {name:'Escudo de Madeira', type:'shield', stat:'def', val:4},
+  {name:'Pinga', type:'consumable', effect:'pinga'},
+];
+const ITEMS_MEDIUM = [
+  {name:'Espada Velha', type:'weapon', stat:'atk', val:7},
+  {name:'Espada Amaldiçoada', type:'weapon', stat:'atk', val:10, curse:'hp', curseVal:-10},
+  {name:'Armadura Amaldiçoada', type:'armor', stat:'def', val:10, curse:'atk', curseVal:-5},
+  {name:'Escudo de Soldado', type:'shield', stat:'def', val:7},
+  {name:'Bandagens', type:'consumable', effect:'bandagem'},
+];
+const ITEMS_RARE = [
+  {name:'Espada do Anjo', type:'weapon', stat:'atk', val:20},
+  {name:'Armadura do Anjo', type:'armor', stat:'def', val:20},
+  {name:'Escudo Angelical', type:'shield', stat:'def', val:20},
+  {name:'Amuleto da Vida', type:'passive', effect:'amuleto'},
+];
+
+const ENEMY_NAMES = [
+  'Goblin','Bugbear','Owlbear','Displacer Beast','Kobold','Hobgoblin',
+  'Gnoll','Troll','Ogre','Minotaur','Basilisk','Manticore'
+];
+
+/* ============================================================
+   MATRIX GENERATION
+============================================================ */
+function generateMatrices() {
+  logicMatrix  = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  visualMatrix = Array.from({length:ROWS}, ()=>Array(COLS).fill('unexplored'));
+  entityMatrix = Array.from({length:ROWS}, ()=>Array(COLS).fill(null));
+  pausedCombat = Array.from({length:ROWS}, ()=>Array(COLS).fill(null));
+
+  let cells = [];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+    if(r===7&&c===0) continue;
+    cells.push([r,c]);
+  }
+  shuffle(cells);
+
+  const total = cells.length; // 63
+  const creatureCount = Math.round(total * 0.15);
+  const chestCount    = Math.round(total * 0.15);
+
+  for(let i=0;i<creatureCount;i++) logicMatrix[cells[i][0]][cells[i][1]] = 1;
+  for(let i=creatureCount;i<creatureCount+chestCount;i++) logicMatrix[cells[i][0]][cells[i][1]] = 2;
+}
+
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+}
+
+/* ============================================================
+   COORD HELPERS
+============================================================ */
+function rowColToCoord(r, c) {
+  const rowNum = 8 - r;
+  const colLetter = String.fromCharCode(97 + c).toUpperCase();
+  return colLetter + rowNum;
+}
+
+/* ============================================================
+   RENDER
+============================================================ */
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for(let r=0;r<ROWS;r++) {
+    for(let c=0;c<COLS;c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+
+      const vis = visualMatrix[r][c];
+      cell.classList.add(vis);
+
+      if(c === 0) {
+        const span = document.createElement('span');
+        span.className = 'coord-row';
+        span.textContent = (8 - r);
+        cell.appendChild(span);
+      }
+      if(r === 7) {
+        const span = document.createElement('span');
+        span.className = 'coord-col';
+        span.textContent = String.fromCharCode(97 + c);
+        cell.appendChild(span);
+      }
+
+      // Entity markers
+      const ent = entityMatrix[r][c];
+      if(ent && !(r===playerRow && c===playerCol)) {
+        const em = document.createElement('div');
+        em.className = 'entity-marker';
+        if(ent === 'goblin') em.textContent = '👺';
+        else if(ent === 'fled_goblin') em.textContent = '👺';
+        else if(ent === 'chest') em.textContent = '📦';
+        cell.appendChild(em);
+      }
+
+      // Player
+      if(r === playerRow && c === playerCol) {
+        const ps = document.createElement('div');
+        ps.className = 'player-sprite';
+        ps.textContent = '🧙';
+        cell.appendChild(ps);
+      }
+
+      board.appendChild(cell);
+    }
+  }
+}
+
+function renderStatus() {
+  const pct = Math.max(0, player.hp / player.maxHp * 100);
+  document.getElementById('hp-bar').style.width = pct + '%';
+  document.getElementById('hp-text').textContent = `${Math.max(0,player.hp)} / ${player.maxHp}`;
+  document.getElementById('atk-text').textContent = player.atk;
+  document.getElementById('def-text').textContent = player.def;
+}
+
+function renderInventory() {
+  const list = document.getElementById('items-list');
+  list.innerHTML = '';
+  inventory.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'item-entry item-' + item.rarity;
+    if(itemSelectMode && i === itemSelectIndex) div.classList.add('selected');
+    div.textContent = `${i+1}. ${item.displayName}`;
+    list.appendChild(div);
+  });
+}
+
+function renderEnemyStatus(show) {
+  const es = document.getElementById('enemy-status');
+  es.style.display = show ? 'block' : 'none';
+  if(show) {
+    document.getElementById('enemy-name').textContent = combat.enemyName.toUpperCase();
+    const pct = Math.max(0, combat.enemyHp / combat.enemyMaxHp * 100);
+    document.getElementById('enemy-hp-bar').style.width = pct + '%';
+    document.getElementById('enemy-hp-text').textContent = `${Math.max(0,combat.enemyHp)} / ${combat.enemyMaxHp}`;
+    document.getElementById('enemy-atk').textContent = combat.enemyAtk;
+    document.getElementById('enemy-def').textContent = combat.enemyDef;
+  }
+}
+
+/* ============================================================
+   CONSOLE OUTPUT
+============================================================ */
+function setConsole(lines) {
+  for(let i=0;i<3;i++) {
+    const el = document.getElementById('console-line-'+(i+1));
+    if(i < lines.length) {
+      const l = lines[i];
+      if(typeof l === 'string') { el.textContent = l; el.className = 'console-line'; }
+      else { el.textContent = l.text; el.className = 'console-line ' + (l.cls||''); }
+    } else {
+      el.textContent = ''; el.className = 'console-line';
+    }
+  }
+}
+
+function clearConsole() { setConsole([]); }
+
+/* ============================================================
+   MOVEMENT
+============================================================ */
+function tryMove(dr, dc) {
+  if(state !== 'explore') return;
+  const nr = playerRow + dr, nc = playerCol + dc;
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+
+  const vis = visualMatrix[nr][nc];
+  const logic = logicMatrix[nr][nc];
+
+  if(vis === 'explored') {
+    // Safe explored cell - move freely
+    movePlayer(nr, nc);
+    clearConsole();
+    return;
+  }
+
+  if(vis === 'fled') {
+    // Re-enter a fled cell — resume the paused combat
+    movePlayer(nr, nc);
+    resumeCombat(nr, nc);
+    return;
+  }
+
+  if(vis === 'unexplored') {
+    if(logic === 0) {
+      movePlayer(nr, nc);
+      revealCell(nr, nc, 0);
+    } else {
+      const coord = rowColToCoord(nr, nc);
+      state = 'confirm_move';
+      pendingMoveRow = nr; pendingMoveCol = nc;
+      pendingCellType = logic;
+      setConsole([
+        {text:'⚠ AVISO!', cls:'warn'},
+        {text:`Um ruído vem de ${coord}!`, cls:'warn'},
+        {text:'Prosseguir? [Y/N]', cls:'dim'}
+      ]);
+    }
+  }
+}
+
+function movePlayer(r, c) {
+  const prevVis = visualMatrix[playerRow][playerCol];
+  // Leave previous cell: current → explored (never touch unexplored or fled)
+  if(prevVis === 'current') {
+    visualMatrix[playerRow][playerCol] = 'explored';
+  }
+  playerRow = r; playerCol = c;
+  // Arrive at new cell: only mark current if it's not a special state
+  if(visualMatrix[r][c] !== 'fled') {
+    visualMatrix[r][c] = 'current';
+  }
+  renderBoard();
+}
+
+function revealCell(r, c, resolvedType) {
+  if(resolvedType === 2) {
+    triggerChest(r, c);
+  } else if(resolvedType === 1) {
+    triggerCombat(r, c);
+  } else {
+    logicMatrix[r][c] = 0;
+    visualMatrix[r][c] = 'explored';
+    exploreCount++;
+    clearConsole();
+    setConsole([{text:`Você explorou ${rowColToCoord(r,c)}. Caminho seguro.`, cls:'info'}]);
+    renderBoard();
+    checkVictory();
+  }
+}
+
+/* ============================================================
+   CONFIRM MOVE (Y/N)
+============================================================ */
+function handleConfirmMove(yes) {
+  if(state !== 'confirm_move') return;
+
+  if(!yes) {
+    state = 'explore';
+    clearConsole();
+    return;
+  }
+
+  // 50% mimicry
+  let resolvedType = pendingCellType;
+  if(Math.random() < 0.5) {
+    resolvedType = pendingCellType === 1 ? 2 : 1;
+  }
+
+  movePlayer(pendingMoveRow, pendingMoveCol);
+  state = 'explore';
+  revealCell(pendingMoveRow, pendingMoveCol, resolvedType);
+}
+
+/* ============================================================
+   CHEST EVENT
+============================================================ */
+function triggerChest(r, c) {
+  const item = generateItem();
+  inventory.push(item);
+  logicMatrix[r][c] = 0;
+  entityMatrix[r][c] = 'chest';
+  visualMatrix[r][c] = 'explored';
+  exploreCount++;
+  state = 'explore';
+
+  setConsole([
+    {text:'📦 Você encontrou um baú!', cls:'success'},
+    {text:`Obtido: ${item.displayName}`, cls: item.rarity==='rare'?'warn':'info'},
+    {text:'Continue explorando...', cls:'dim'}
+  ]);
+
+  renderBoard();
+  renderInventory();
+  renderStatus();
+  checkVictory();
+}
+
+function generateItem() {
+  const roll = Math.random();
+  let table, rarity;
+  if(roll < 0.60)      { table = ITEMS_COMMON; rarity = 'common'; }
+  else if(roll < 0.85) { table = ITEMS_MEDIUM; rarity = 'medium'; }
+  else                 { table = ITEMS_RARE;   rarity = 'rare'; }
+
+  const base = table[Math.floor(Math.random()*table.length)];
+  const item = {...base, rarity};
+
+  let display = base.name;
+  if(base.stat === 'atk') display += ` (+${base.val} ATK)`;
+  else if(base.stat === 'def') display += ` (+${base.val} DEF)`;
+  if(base.curse) {
+    if(base.curse==='hp')  display += ` / -${Math.abs(base.curseVal)} HP Máx`;
+    if(base.curse==='atk') display += ` / -${Math.abs(base.curseVal)} ATK`;
+  }
+  if(base.effect === 'amuleto')   display += ' (Passivo)';
+  if(base.effect === 'pinga')     display += ' (Consumível)';
+  if(base.effect === 'bandagem')  display = base.name + ' (Consumível)';
+  item.displayName = display;
+
+  if(base.type === 'weapon' || base.type === 'armor' || base.type === 'shield') {
+    if(base.stat==='atk') player.atk += base.val;
+    if(base.stat==='def') player.def += base.val;
+    if(base.curse==='hp')  { player.maxHp += base.curseVal; player.hp = Math.min(player.hp, player.maxHp); }
+    if(base.curse==='atk') player.atk += base.curseVal;
+    // ATK can never drop below 2 — prevents healing enemies instead of damaging them
+    player.atk = Math.max(2, player.atk);
+    player.def = Math.max(0, player.def);
+  }
+  if(base.effect === 'amuleto') {
+    player.hasAmuleto = true;
+  }
+  return item;
+}
+
+/* ============================================================
+   COMBAT — Start fresh
+============================================================ */
+function triggerCombat(r, c) {
+  const name = ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
+  const variance = 5;
+  const eHp  = Math.max(5,  player.maxHp + randInt(-variance, variance));
+  const eAtk = Math.max(1,  player.atk   + randInt(-variance, variance));
+  const eDef = Math.max(0,  player.def   + randInt(-variance, variance));
+
+  combat = {
+    row: r, col: c,
+    enemy: true,
+    enemyName: name,
+    enemyHp: eHp, enemyMaxHp: eHp,
+    enemyAtk: eAtk, enemyDef: eDef,
+    playerDefending: false,
+    enemyDefending: false,
+    consecutiveDefends: 0,
+    playerDefended: false
+  };
+
+  // Mark as "fled" style until resolved (so it appears on map)
+  entityMatrix[r][c] = 'fled_goblin';
+  visualMatrix[r][c] = 'fled';
+
+  state = 'combat_init';
+  renderEnemyStatus(true);
+  setConsole([
+    {text:`⚔ ${name} aparece!`, cls:'danger'},
+    {text:'Atacar? [Y] ou Fugir? [N]', cls:'warn'}
+  ]);
+  renderBoard();
+}
+
+/* ============================================================
+   COMBAT — Resume from fled cell
+============================================================ */
+function resumeCombat(r, c) {
+  const saved = pausedCombat[r][c];
+  if(!saved) {
+    // Cell still has a fresh monster (shouldn't normally happen)
+    setConsole([{text:'Nada aqui.', cls:'dim'}]);
+    return;
+  }
+
+  combat = {...saved, row: r, col: c};
+  pausedCombat[r][c] = null;
+  state = 'combat_init';
+  renderEnemyStatus(true);
+  setConsole([
+    {text:`⚔ ${combat.enemyName} ainda está aqui!`, cls:'danger'},
+    {text:'Atacar? [Y] ou Fugir novamente? [N]', cls:'warn'}
+  ]);
+}
+
+/* ============================================================
+   COMBAT — Init (attack or try-flee before battle starts)
+============================================================ */
+function handleCombatInit(attack) {
+  if(state !== 'combat_init') return;
+
+  if(!attack) {
+    // Attempt flee before combat proper
+    fleeFromCombat();
+  } else {
+    // Enter real combat
+    state = 'combat_turn';
+    setConsole([
+      {text:`${combat.enemyName} — Em guarda!`, cls:'danger'},
+      {text:'Seu turno! Atacar? [Y] ou Defender? [N]', cls:'warn'},
+      {text:'[ESPAÇO] para usar item', cls:'dim'}
+    ]);
+  }
+}
+
+function fleeFromCombat() {
+  const r = combat.row, c = combat.col;
+
+  // Save combat state into the cell
+  pausedCombat[r][c] = {...combat};
+
+  // Cell stays red with monster icon
+  entityMatrix[r][c] = 'fled_goblin';
+  visualMatrix[r][c] = 'fled';
+  logicMatrix[r][c] = 1;   // still a creature cell
+
+  // Move player back to previous adjacent cell (or just pop from board)
+  // Find a safe neighbor to step back to
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+  let retreated = false;
+  for(const [dr,dc] of dirs) {
+    const nr = r+dr, nc = c+dc;
+    if(nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+    if(visualMatrix[nr][nc] === 'explored' || visualMatrix[nr][nc] === 'current') {
+      playerRow = nr; playerCol = nc;
+      visualMatrix[nr][nc] = 'current';
+      retreated = true;
+      break;
+    }
+  }
+  if(!retreated) {
+    // stay on the cell, just change visual back to fled
+    visualMatrix[r][c] = 'fled';
+  }
+
+  state = 'explore';
+  renderEnemyStatus(false);
+  renderBoard();
+  setConsole([
+    {text:'Você fugiu! O monstro te espera...', cls:'warn'},
+    {text:`Casa ${rowColToCoord(r,c)} marcada em vermelho.`, cls:'dim'},
+    {text:'Você pode retornar quando quiser.', cls:'dim'}
+  ]);
+  combat = {};
+}
+
+/* ============================================================
+   COMBAT — Turn
+============================================================ */
+function handleCombatTurn(attackChoice) {
+  if(state !== 'combat_turn') return;
+
+  combat.playerDefended = !attackChoice;
+  combat.playerDefending = !attackChoice;
+
+  if(!attackChoice) {
+    // Defend during turn — also accumulates flee counter
+    combat.consecutiveDefends++;
+    if(combat.consecutiveDefends >= 3) {
+      fleeFromCombat();
+      return;
+    }
+    setConsole([{text:'Você se defende...', cls:'info'}, {text:'Aguardando resposta do inimigo...', cls:'dim'}]);
+  } else {
+    combat.consecutiveDefends = 0;
+    let dmg = player.atk;
+    if(combat.enemyDefending) dmg = Math.max(0, dmg - combat.enemyDef);
+    combat.enemyHp -= dmg;
+    combat.enemyDefending = false;
+    renderEnemyStatus(true);
+
+    if(combat.enemyHp <= 0) {
+      combatVictory();
+      return;
+    }
+    setConsole([
+      {text:`Você atacou! ${combat.enemyName} sofreu ${dmg} de dano.`, cls:'success'},
+      {text:'Turno do inimigo...', cls:'dim'}
+    ]);
+  }
+
+  setTimeout(enemyTurn, 700);
+}
+
+function enemyTurn() {
+  if(state !== 'combat_turn') return;
+
+  const enemyAttacks = Math.random() < 0.5;
+
+  if(enemyAttacks) {
+    combat.enemyDefending = false;
+    let dmg = combat.enemyAtk;
+    if(combat.playerDefended) dmg = Math.max(0, dmg - player.def);
+    player.hp -= dmg;
+    renderStatus();
+
+    if(player.hp <= 0) {
+      gameOver();
+      return;
+    }
+
+    setConsole([
+      {text:`${combat.enemyName} atacou! Você sofreu ${dmg} de dano.`, cls:'danger'},
+      {text:'Seu turno! Atacar? [Y] ou Defender? [N]', cls:'warn'},
+      {text:'[ESPAÇO] para usar item', cls:'dim'}
+    ]);
+  } else {
+    combat.enemyDefending = true;
+    setConsole([
+      {text:`${combat.enemyName} se defende!`, cls:'info'},
+      {text:'Seu turno! Atacar? [Y] ou Defender? [N]', cls:'warn'},
+      {text:'[ESPAÇO] para usar item', cls:'dim'}
+    ]);
+  }
+  combat.playerDefended = false;
+}
+
+function combatVictory() {
+  const r = combat.row, c = combat.col;
+  logicMatrix[r][c] = 0;
+  entityMatrix[r][c] = 'goblin';
+  visualMatrix[r][c] = 'explored';
+  pausedCombat[r][c] = null;
+  exploreCount++;
+  state = 'explore';
+  renderEnemyStatus(false);
+  renderBoard();
+
+  if(player.hasAmuleto) {
+    player.hp = Math.min(player.maxHp, player.hp + 20);
+    renderStatus();
+    setConsole([
+      {text:`⚔ Vitória! ${combat.enemyName} foi derrotado!`, cls:'success'},
+      {text:'Amuleto da Vida: +20 HP recuperados!', cls:'warn'},
+    ]);
+  } else {
+    setConsole([{text:`⚔ Vitória! ${combat.enemyName} foi derrotado!`, cls:'success'}]);
+  }
+
+  combat = {};
+  checkVictory();
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+
+/* ============================================================
+   CONSUMABLES
+============================================================ */
+function enterItemSelect() {
+  if(state !== 'combat_turn') return;
+  itemSelectMode = true;
+  itemSelectIndex = 0;
+  state = 'use_item';
+  setConsole([
+    {text:'↑↓ para navegar, ENTER para usar', cls:'info'},
+    {text:'ESC ou ESPAÇO para cancelar', cls:'dim'}
+  ]);
+  renderInventory();
+}
+
+function exitItemSelect() {
+  itemSelectMode = false;
+  state = 'combat_turn';
+  renderInventory();
+  setConsole([
+    {text:'Seu turno! Atacar? [Y] ou Defender? [N]', cls:'warn'},
+    {text:'[ESPAÇO] para usar item', cls:'dim'}
+  ]);
+}
+
+function useSelectedItem() {
+  if(state !== 'use_item') return;
+  const item = inventory[itemSelectIndex];
+  if(!item) return;
+
+  if(item.type !== 'consumable') {
+    setConsole([{text:'Favor escolher um consumível!', cls:'warn'}]);
+    setTimeout(()=>{
+      setConsole([
+        {text:'↑↓ para navegar, ENTER para usar', cls:'info'},
+        {text:'ESC ou ESPAÇO para cancelar', cls:'dim'}
+      ]);
+    }, 1000);
+    return;
+  }
+
+  if(item.effect === 'pinga') {
+    player.def = Math.max(0, player.def - 2);
+    player.atk = Math.max(2, player.atk); // pinga doesn't affect atk but keep floor safe
+    player.hp = Math.min(player.maxHp, player.hp + 10);
+  } else if(item.effect === 'bandagem') {
+    player.hp = Math.min(player.maxHp, player.hp + 15);
+  }
+
+  inventory.splice(itemSelectIndex, 1);
+  if(itemSelectIndex >= inventory.length) itemSelectIndex = Math.max(0, inventory.length-1);
+
+  renderStatus();
+  renderInventory();
+  exitItemSelect();
+}
+
+/* ============================================================
+   VICTORY / GAME OVER
+============================================================ */
+function countPendingMonsters() {
+  // Count cells that still have a live (fled) monster the player hasn't defeated
+  let count = 0;
+  for(let r=0;r<ROWS;r++)
+    for(let c=0;c<COLS;c++)
+      if(entityMatrix[r][c] === 'fled_goblin') count++;
+  return count;
+}
+
+function checkVictory() {
+  if(exploreCount < TOTAL_CELLS) return; // Haven't visited every cell yet
+
+  const pending = countPendingMonsters();
+  if(pending > 0) {
+    // All cells visited but fled monsters still alive — warn player
+    setConsole([
+      {text:`⚠ ${pending} monstro(s) ainda vivo(s)!`, cls:'warn'},
+      {text:'Derrote todos para avançar.', cls:'warn'},
+      {text:'Casas em vermelho ainda têm inimigos.', cls:'dim'}
+    ]);
+    return;
+  }
+
+  state = 'victory';
+  renderEnemyStatus(false);
+  setConsole([
+    {text:'🏆 Parabéns explorador!', cls:'success'},
+    {text:'Você finalizou o jogo!', cls:'success'},
+    {text:'Ir para outra floresta? [Y/N]', cls:'warn'}
+  ]);
+}
+
+function gameOver() {
+  state = 'gameover';
+  renderEnemyStatus(false);
+  setConsole([
+    {text:'💀 GAME OVER', cls:'danger'},
+    {text:'Você foi derrotado...', cls:'danger'},
+    {text:'Recarregue a página para jogar novamente.', cls:'dim'}
+  ]);
+  combat = {};
+}
+
+function newGamePlus() {
+  generation++;
+  // Keep player stats and inventory exactly as-is — no scaling
+  generateMatrices();
+  playerRow = 7; playerCol = 0;
+  visualMatrix[7][0] = 'current';
+  exploreCount = 0;
+  state = 'explore';
+  itemSelectMode = false;
+  combat = {};
+  renderBoard();
+  renderEnemyStatus(false);
+  renderInventory();
+  renderStatus();
+  setConsole([
+    {text:`☩ Floresta #${generation} ☩`, cls:'warn'},
+    {text:'Um novo mapa... mas os perigos conhecem você.', cls:'info'},
+    {text:'Use as setas para explorar.', cls:'dim'}
+  ]);
+}
+
+function handleVictory(yes) {
+  if(state !== 'victory') return;
+  if(!yes) {
+    setConsole([{text:'🏆 O explorador descansa... por enquanto.', cls:'success'}]);
+  } else {
+    newGamePlus();
+  }
+}
+
+/* ============================================================
+   KEYBOARD HANDLER
+============================================================ */
+document.addEventListener('keydown', (e) => {
+  e.preventDefault();
+  const key = e.key.toLowerCase();
+
+  if(state === 'use_item') {
+    if(key === 'arrowup')   { itemSelectIndex = Math.max(0, itemSelectIndex-1); renderInventory(); }
+    else if(key === 'arrowdown') { itemSelectIndex = Math.min(inventory.length-1, itemSelectIndex+1); renderInventory(); }
+    else if(key === 'enter') useSelectedItem();
+    else if(key === ' ' || key === 'escape') exitItemSelect();
+    return;
+  }
+
+  if(state === 'explore') {
+    if(key === 'arrowup')    tryMove(-1, 0);
+    else if(key === 'arrowdown')  tryMove(1, 0);
+    else if(key === 'arrowleft')  tryMove(0, -1);
+    else if(key === 'arrowright') tryMove(0, 1);
+    return;
+  }
+
+  if(key === 'y') {
+    if(state === 'confirm_move')  handleConfirmMove(true);
+    else if(state === 'combat_init') handleCombatInit(true);
+    else if(state === 'combat_turn') handleCombatTurn(true);
+    else if(state === 'victory')     handleVictory(true);
+    return;
+  }
+  if(key === 'n') {
+    if(state === 'confirm_move')  handleConfirmMove(false);
+    else if(state === 'combat_init') handleCombatInit(false);
+    else if(state === 'combat_turn') handleCombatTurn(false);
+    else if(state === 'victory')     handleVictory(false);
+    return;
+  }
+
+  if(key === ' ') {
+    if(state === 'combat_turn') enterItemSelect();
+    return;
+  }
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+function initGame() {
+  generateMatrices();
+  playerRow = 7; playerCol = 0;
+  visualMatrix[7][0] = 'current';
+  exploreCount = 0;
+
+  inventory = [{
+    name: 'Espada de Madeira', type: 'weapon', stat: 'atk', val: 2,
+    rarity: 'common', displayName: 'Espada de Madeira (+2 ATK)',
+    effect: null
+  }];
+
+  player = { hp: 100, maxHp: 100, atk: 2, def: 0, hasAmuleto: false };
+  combat = {};
+  itemSelectMode = false;
+  itemSelectIndex = 0;
+  state = 'explore';
+
+  renderBoard();
+  renderInventory();
+  renderStatus();
+  renderEnemyStatus(false);
+  setConsole([
+    {text:'☩ Bem-vindo ao Jogo de Exploração RPG ☩', cls:'success'},
+    {text:'Use as setas para explorar o mapa.', cls:'info'},
+    {text:'Boa sorte, aventureiro!', cls:'dim'}
+  ]);
+}
+
+initGame();
+</script>
+</body>
+</html>
