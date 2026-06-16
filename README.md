@@ -169,17 +169,6 @@ int n = (int)fabs(floor(v * 10000)) % 100;
 
 ---
 
-## ❌ Funcionalidades não implementadas (vs. versão web)
-
-Esta é uma versão simplificada. As seguintes features da versão HTML estão ausentes:
-
-- Sistema de inventário com itens consumíveis (Pinga, Bandagens)
-- Amuleto da Vida (cura passiva pós-combate)
-- Inimigo com defesa tática real (na versão terminal ele "defende" mas não mitiga dano do player)
-- Interface visual colorida / pixel art
-
----
-
 ## 📄 Licença
 
 Projeto educacional de livre uso.
